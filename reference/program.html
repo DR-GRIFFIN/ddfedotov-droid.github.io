@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Программа курса</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+<h1>Программа курса</h1>
+<p class="subtitle">Стратегия операционных данных в клинических исследованиях — путь к роли Director (AstraZeneca, Clin Ops)</p>
+<p class="meta">12 месяцев · 3–5 часов в неделю · ≈ 45 коротких уроков · 3 проекта в портфолио · 1 сертификат</p>
+
+<div class="callout">
+<p><strong>Как устроена неделя.</strong> Один урок (30–45 минут): немного теории и сразу практика с проверкой.
+Остальное время уходит на проект модуля и чтение главного источника. Каждые 4–5 недель — урок-повторение:
+вы вспоминаете пройденное без подсказок. Так знания держатся месяцами, а не до конца недели.</p>
+</div>
+
+<p>Программа гибкая. После каждого урока я записываю, что вы освоили, и подстраиваю следующий урок:
+если что-то идёт легко — ускоряемся, если трудно — добавляю практику. Цель и ограничения описаны в
+<code>MISSION.md</code>, источники — в <code>RESOURCES.md</code>.</p>
+
+<!-- Модуль 1 -->
+<section class="module">
+<div class="module-head"><h2>1. Язык данных: SQL и архитектура</h2><span class="tag">мес. 1–2 · 8 недель</span></div>
+<p>Зачем: директор по данным должен сам проверить цифру и понимать, о чём говорят инженеры.</p>
+<ol class="lessons">
+<li>Таблица, строка, столбец: как исследование выглядит в базе данных</li>
+<li>Первый запрос: <code>SELECT</code>, <code>WHERE</code>, <code>ORDER BY</code> на данных реальных исследований</li>
+<li>Считаем: <code>COUNT</code>, <code>GROUP BY</code> — сколько исследований по фазам и областям</li>
+<li>Связываем таблицы: <code>JOIN</code> — исследование ↔ центры ↔ страны</li>
+<li>Повторение без подсказок №1</li>
+<li>Запрос по шагам: <code>CTE</code> (<code>WITH</code>) и как читать чужой SQL</li>
+<li>Оконные функции: рейтинги и накопительный набор пациентов</li>
+<li>Архитектура: OLTP vs хранилище, warehouse / lake / lakehouse, ELT — на одной картинке</li>
+</ol>
+<p class="deliverable">Результат: 20 решённых SQL-задач на данных AACT; первая страница глоссария.</p>
+</section>
+
+<!-- Модуль 2 -->
+<section class="module">
+<div class="module-head"><h2>2. Операционные данные клинических исследований</h2><span class="tag">мес. 3–4 · 8 недель</span></div>
+<p>Зачем: это ваше главное преимущество — переводим клинический опыт на язык данных.</p>
+<ol class="lessons">
+<li>Карта систем: CTMS, EDC, IRT, eTMF, ePRO, safety — кто что хранит</li>
+<li>Модель данных исследования: study → country → site → subject → visit</li>
+<li>Операционные KPI: активация центров, набор vs план, screen failure, data entry lag, query aging</li>
+<li>ICH E6(R3) и RBQM: critical-to-quality, KRI, QTL — что из этого данные</li>
+<li>Повторение без подсказок №2 (вперемешку модули 1 и 2)</li>
+<li>CDISC обзорно: зачем стандарты, ODM и SDTM без программирования</li>
+<li>Snowflake на практике: загружаем AACT, роли, warehouse, стоимость запроса</li>
+<li>Строим витрину и дашборд операционных метрик</li>
+</ol>
+<p class="deliverable">Проект 1: витрина «операционные метрики исследований» в Snowflake + дашборд.</p>
+</section>
+
+<!-- Модуль 3 -->
+<section class="module">
+<div class="module-head"><h2>3. Стратегия данных и data products</h2><span class="tag">мес. 5–6 · 8 недель</span></div>
+<p>Зачем: ядро роли «Operational Data Strategy» — как превратить данные в продукт для бизнеса.</p>
+<ol class="lessons">
+<li>Что такое стратегия данных: от бизнес-цели к возможностям и roadmap</li>
+<li>Data product: владелец, потребитель, контракт, SLA — на примере витрины Clin Ops</li>
+<li>Data mesh: домены, self-service платформа, федеративное управление</li>
+<li>Operating model: data owner, data steward, R&amp;D Data Office — кто за что отвечает</li>
+<li>Повторение без подсказок №3</li>
+<li>Платформы как возможности: Snowflake, Domino, Navari — что каждая даёт бизнесу</li>
+<li>Бизнес-кейс: как посчитать ценность данных (время цикла, стоимость, риск)</li>
+<li>Пишем первую страницу собственной стратегии</li>
+</ol>
+<p class="deliverable">Результат: одностраничная «стратегия на салфетке» для Clin Ops-данных.</p>
+</section>
+
+<!-- Модуль 4 -->
+<section class="module">
+<div class="module-head"><h2>4. Data discovery, governance и качество</h2><span class="tag">мес. 7–8 · 9 недель</span></div>
+<p>Зачем: ядро роли «Data Discovery» — чтобы данные можно было найти, понять и им доверять.</p>
+<ol class="lessons">
+<li>Метаданные: технические, бизнес, операционные</li>
+<li>Каталог и бизнес-глоссарий: как люди находят данные (Snowflake Horizon, Collibra, Alation)</li>
+<li>Lineage: откуда пришла цифра в отчёте</li>
+<li>Качество данных: измерения, правила, проверки на SQL</li>
+<li>Повторение без подсказок №4</li>
+<li>FAIR-принципы и доступ к данным</li>
+<li>GxP для данных: 21 CFR Part 11, ALCOA+, валидация; GDPR для данных пациентов</li>
+<li>MDM и справочные данные: центры, страны, исследователи</li>
+<li>Подготовка к CDMP: стратегия экзамена и пробный тест</li>
+</ol>
+<p class="deliverable">Проект 2: каталог, глоссарий, правила качества и схема lineage для витрины. Сертификат: DAMA CDMP Associate.</p>
+</section>
+
+<!-- Модуль 5 -->
+<section class="module">
+<div class="module-head"><h2>5. Данные, готовые для AI</h2><span class="tag">мес. 9–10 · 7 недель</span></div>
+<p>Зачем: AZ активно вкладывается в AI для клинической разработки; директор по данным готовит для этого почву.</p>
+<ol class="lessons">
+<li>Сценарии AI в Clin Ops: прогноз набора, выбор центров, аномалии в RBQM</li>
+<li>GenAI простыми словами: LLM, RAG, text-to-SQL, агенты</li>
+<li>Семантический слой: почему без него AI ошибается</li>
+<li>Повторение без подсказок №5</li>
+<li>AI governance: EU AI Act, валидация в GxP, человек в контуре</li>
+<li>Демо: вопросы к витрине на естественном языке (Snowflake Cortex Analyst)</li>
+<li>Как оценить AI-кейс: ценность, риск, готовность данных</li>
+</ol>
+<p class="deliverable">Проект 3: text-to-SQL демо поверх своей витрины.</p>
+</section>
+
+<!-- Модуль 6 -->
+<section class="module">
+<div class="module-head"><h2>6. Позиционирование и выход на рынок</h2><span class="tag">мес. 11–12 · 8 недель</span></div>
+<p>Зачем: превратить знания в оффер.</p>
+<ol class="lessons">
+<li>Документ «Operational Data Strategy for Clinical Development»: структура</li>
+<li>Текущее состояние и видение</li>
+<li>Governance-модель и data discovery</li>
+<li>AI-сценарии и roadmap на 12–24 месяца</li>
+<li>Итоговое повторение всего курса</li>
+<li>Портфолио: GitHub и страница на сайте</li>
+<li>Истории для интервью (STAR): влияние без полномочий, изменения, решения на данных</li>
+<li>Нетворкинг и отклики: PHUSE, SCDM, DIA, люди из R&amp;D Data Office</li>
+</ol>
+<p class="deliverable">Результат: стратегия на 5–7 страниц, портфолио, отправленные заявки (Director + Associate Director).</p>
+</section>
+
+<hr>
+<h2>Контрольные точки</h2>
+<table>
+<thead><tr><th>Месяц</th><th>Проверка</th></tr></thead>
+<tbody>
+<tr><td>2</td><td>Пишу SQL с JOIN, CTE и оконными функциями без подсказок</td></tr>
+<tr><td>4</td><td>Витрина AACT в Snowflake и дашборд работают</td></tr>
+<tr><td>6</td><td>Есть одностраничная стратегия данных для Clin Ops</td></tr>
+<tr><td>8</td><td>CDMP Associate сдан; каталог и глоссарий готовы</td></tr>
+<tr><td>10</td><td>Text-to-SQL демо работает на своих данных</td></tr>
+<tr><td>12</td><td>Стратегия, портфолио, заявки отправлены</td></tr>
+</tbody>
+</table>
+
+<div class="callout ask">
+<p>Что-то в программе кажется лишним, а чего-то не хватает? Напишите мне — я ваш преподаватель,
+и программа меняется под вас. Чтобы начать урок, напишите <code>/teach</code> и, если хотите, тему.</p>
+</div>
+</main>
+</body>
+</html>
