@@ -44,13 +44,22 @@ export function nextTrainingDay(state, now = new Date()) {
   return null;
 }
 
+// Latest morning check was red and the user hasn't said the pain is gone since.
+export function painPaused(state) {
+  const check = [...(state.checks ?? [])].sort((a, b) => (a.at ?? '').localeCompare(b.at ?? '')).at(-1);
+  if (check?.light !== 'red') return false;
+  return !state.painResolvedAt || state.painResolvedAt < check.at;
+}
+
 // Main card on Today. One of:
-// blocked | comeback | done | workout | rest
+// blocked | painPause | active | comeback | done | workout | rest
 export function todayCard(state, now = new Date()) {
   const program = PROGRAM_BY_ID[state.plan?.program];
   if (state.health?.blocked && !state.health?.clearedAt) return { kind: 'blocked' };
 
   const today = dateKey(now);
+  if (state.active?.date === today) return { kind: 'active', program, key: state.active.key };
+  if (painPaused(state)) return { kind: 'painPause' };
   const list = sortedWorkouts(state);
   const last = list.at(-1);
   if (last?.date === today) return { kind: 'done', program };

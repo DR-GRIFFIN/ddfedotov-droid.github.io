@@ -4,6 +4,7 @@ import { esc, go, tabShell, toast, sheet, bar } from '../ui.js';
 import { store } from '../store.js';
 import { EXERCISE_BY_ID } from '../data/exercises.js';
 import { dateKey } from '../dates.js';
+import { openCheckin } from './checkin.js';
 import {
   todayCard, weekProgress, countComebacks, pendingMorningCheck, nutritionToday, latestWeight,
 } from '../logic/today.js';
@@ -18,6 +19,20 @@ function dayCard(card, state) {
           <h2>${esc(t('blockedTitle'))}</h2>
           <p>${esc(t('blockedText'))}</p>
           <button type="button" class="btn secondary" data-go="/health-stop">${esc(t('blockedOpen'))}</button>
+        </section>`;
+    case 'active':
+      return `
+        <section class="card day accent">
+          <h2>${esc(t('activeTitle', { key: card.key }))}</h2>
+          <p>${esc(t('activeText'))}</p>
+          <button type="button" class="btn" data-go="/workout">${esc(t('continueWorkout'))}</button>
+        </section>`;
+    case 'painPause':
+      return `
+        <section class="card day warn">
+          <h2>${esc(t('painPauseTitle'))}</h2>
+          <p>${esc(t('painPauseText'))}</p>
+          <button type="button" class="btn secondary" data-act="pain-gone">${esc(t('painGone'))}</button>
         </section>`;
     case 'done':
       return `
@@ -70,7 +85,7 @@ export function today(root, { rerender }) {
   const card = todayCard(state);
   const week = weekProgress(state);
   const comebacks = countComebacks(state);
-  const check = card.kind === 'blocked' ? null : pendingMorningCheck(state);
+  const check = ['blocked', 'active'].includes(card.kind) ? null : pendingMorningCheck(state);
   const food = nutritionToday(state);
   const weight = latestWeight(state);
 
@@ -112,7 +127,11 @@ export function today(root, { rerender }) {
   root.innerHTML = tabShell('today', t('hello', { name: state.profile?.name ?? '' }), body);
 
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
-  root.querySelectorAll('[data-act="workout"]').forEach((b) => b.addEventListener('click', () => toast(t('soonWorkout'))));
+  root.querySelectorAll('[data-act="workout"]').forEach((b) => b.addEventListener('click', () => openCheckin(b.dataset.mode ?? 'normal')));
+  root.querySelector('[data-act="pain-gone"]')?.addEventListener('click', () => {
+    store.update((s) => { s.painResolvedAt = new Date().toISOString(); });
+    rerender();
+  });
   root.querySelector('[data-act="food"]').addEventListener('click', () => toast(t('soonFood')));
   root.querySelector('[data-act="weight"]').addEventListener('click', () => weightSheet(weight, rerender));
 
