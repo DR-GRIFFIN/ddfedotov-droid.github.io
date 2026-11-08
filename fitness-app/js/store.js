@@ -15,7 +15,14 @@ export const emptyState = () => ({
   painResolvedAt: null,     // user said the pain from a red morning check is gone
   checks: [],               // morning checks: { workoutDate, light: 'green' | 'yellow' | 'red' }
   weights: [],              // { date, kg }
-  food: [],                 // { date, name, kcal, protein }
+  food: [],                 // exact mode entries: { id, date, name, kcal, protein }
+  nutrition: {
+    mode: 'simple',         // 'simple' (hand portions) | 'exact' (calories)
+    portions: {},           // { 'YYYY-MM-DD': { palm, fist, cup, thumb } }
+    habitDays: {},          // { 'YYYY-MM-DD': habitId }
+    habitChoice: null,      // { week: 'YYYY-MM-DD' (Monday), id }
+    lessonsRead: [],        // lesson indexes
+  },
 });
 
 let state = load();
@@ -27,7 +34,12 @@ function load() {
     if (!raw) return emptyState();
     const saved = JSON.parse(raw);
     const base = emptyState();
-    return { ...base, ...saved, onboarding: { ...base.onboarding, ...saved.onboarding } };
+    return {
+      ...base,
+      ...saved,
+      onboarding: { ...base.onboarding, ...saved.onboarding },
+      nutrition: { ...base.nutrition, ...saved.nutrition },
+    };
   } catch {
     return emptyState();
   }

@@ -10,6 +10,7 @@ import { today } from './screens/today.js';
 import { profile } from './screens/profile.js';
 import { placeholder } from './screens/placeholder.js';
 import { workout } from './screens/workout.js';
+import { nutrition } from './screens/nutrition.js';
 import { settleStale } from './logic/workout.js';
 
 const root = document.getElementById('app');
@@ -23,7 +24,7 @@ const ROUTES = {
   profile,
   workout,
   program: placeholder('program'),
-  nutrition: placeholder('nutrition'),
+  nutrition,
   progress: placeholder('progress'),
   friends: placeholder('friends'),
 };
