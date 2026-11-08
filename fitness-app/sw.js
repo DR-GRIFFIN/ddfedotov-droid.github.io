@@ -1,6 +1,6 @@
 // Service worker: app shell works offline.
 // Network first, cache as fallback, so new versions arrive without manual cache busting.
-const CACHE = 'orleans-v1';
+const CACHE = 'orleans-v2';
 const SHELL = [
   './',
   './index.html',
@@ -16,6 +16,8 @@ const SHELL = [
   './js/dates.js',
   './js/data/exercises.js',
   './js/data/programs.js',
+  './js/data/cues.js',
+  './js/logic/workout.js',
   './js/logic/nutrition.js',
   './js/logic/screening.js',
   './js/logic/recommend.js',
@@ -27,6 +29,8 @@ const SHELL = [
   './js/screens/today.js',
   './js/screens/profile.js',
   './js/screens/placeholder.js',
+  './js/screens/checkin.js',
+  './js/screens/workout.js',
 ];
 
 self.addEventListener('install', (event) => {
