@@ -1,6 +1,7 @@
 // What the Today screen shows. Pure functions over the stored state, easy to test.
 import { dateKey, parseKey, daysBetween, isoDay, weekStart, addDays } from '../dates.js';
 import { PROGRAM_BY_ID } from '../data/programs.js';
+import { estimate, portionsOn } from './portions.js';
 
 export const COMEBACK_GAP_DAYS = 5;
 
@@ -85,9 +86,11 @@ export function pendingMorningCheck(state, now = new Date()) {
 export function nutritionToday(state, now = new Date()) {
   const today = dateKey(now);
   const eaten = (state.food ?? []).filter((f) => f.date === today);
+  // Portions logged in simple mode count too, as an estimate.
+  const fromPortions = estimate(portionsOn(state, today));
   return {
-    kcal: eaten.reduce((s, f) => s + (f.kcal || 0), 0),
-    protein: eaten.reduce((s, f) => s + (f.protein || 0), 0),
+    kcal: eaten.reduce((s, f) => s + (f.kcal || 0), 0) + fromPortions.kcal,
+    protein: eaten.reduce((s, f) => s + (f.protein || 0), 0) + fromPortions.protein,
     target: state.plan?.targets ?? { kcal: 0, protein: 0 },
   };
 }
