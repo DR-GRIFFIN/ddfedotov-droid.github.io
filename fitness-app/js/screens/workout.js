@@ -91,7 +91,21 @@ function lastTimeText(state, it) {
   return kgs.length === 1 ? `${fmtKg(kgs[0])} ${t('kg')} × ${reps}` : reps;
 }
 
-function videoBlock(ex) {
+// Exercises that have an interactive machine model in figures/ (built with the Anatomy skill).
+const FIGURES = new Set(['leg_press']);
+
+function videoBlock(ex, it) {
+  if (FIGURES.has(ex.id)) {
+    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const kg = it?.sets.find((s) => !s.done)?.kg ?? it?.sets[0]?.kg;
+    const params = new URLSearchParams({ embed: '1', reps: String(it?.max ?? 10) });
+    if (kg) params.set('kg', String(kg));
+    const src = `figures/${ex.id}${dark ? '' : '-light'}.html?${params}`;
+    const q = encodeURIComponent(t('videoQuery', { name: tr(ex.name) }));
+    return `
+      <div class="figure-embed"><iframe src="${esc(src)}" title="${esc(tr(ex.name))}" loading="lazy"></iframe></div>
+      <a class="link-btn" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">▶ ${esc(t('videoSearch'))}</a>`;
+  }
   if (ex.video) {
     return `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${esc(ex.video)}" title="${esc(tr(ex.name))}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
   }
@@ -124,7 +138,7 @@ function exercise(root, index, rerender) {
     <main class="content no-tabs exercise">
       <h2 class="ex-title">${esc(tr(ex.name))}</h2>
       <p class="muted small">${esc(t('setsX', { sets: it.sets.length, range: rangeText(it) }))}</p>
-      ${videoBlock(ex)}
+      ${videoBlock(ex, it)}
       <ul class="cues">${cues.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>
       ${it.note ? `<p class="note">${esc(t(it.note.k, it.note.vars))}</p>` : ''}
 
