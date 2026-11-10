@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05080f">
+  <meta name="robots" content="noindex">
+  <title>Джарвис</title>
+  <link rel="stylesheet" href="jarvis.css">
+</head>
+<body>
+  <header class="top">
+    <span class="brand">J.A.R.V.I.S.</span>
+    <div class="top-actions">
+      <button id="clearBtn" class="ghost" type="button" title="Начать новый разговор">Новый чат</button>
+      <button id="settingsBtn" class="ghost" type="button" title="Настройки">Настройки</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="core" aria-live="polite">
+      <button id="orb" class="orb" type="button" aria-label="Включить Джарвиса">
+        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+        <span class="dot"></span>
+      </button>
+      <p id="status" class="status">Нажмите на круг, чтобы включить</p>
+      <p id="heard" class="heard"></p>
+    </section>
+
+    <section id="log" class="log" aria-label="Разговор"></section>
+  </main>
+
+  <footer class="composer">
+    <div id="attachments" class="attachments"></div>
+    <form id="form" class="row">
+      <label class="icon-btn" title="Прикрепить файл (PDF, фото, текст)">
+        <input id="fileInput" type="file" multiple hidden
+               accept=".pdf,image/png,image/jpeg,image/gif,image/webp,.txt,.md,.csv,.json,.html,.xml,.js,.ts,.py,.log,.yaml,.yml">
+        <span aria-hidden="true">📎</span><span class="sr">Прикрепить файл</span>
+      </label>
+      <input id="text" type="text" autocomplete="off" placeholder="Напишите или скажите «Джарвис, …»">
+      <button id="micBtn" class="icon-btn" type="button" title="Сказать без слова «Джарвис»">
+        <span aria-hidden="true">🎙</span><span class="sr">Говорить</span>
+      </button>
+      <button class="send" type="submit">Отправить</button>
+    </form>
+  </footer>
+
+  <dialog id="settings">
+    <form method="dialog" class="settings">
+      <h2>Настройки</h2>
+
+      <label>Ключ Claude API
+        <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+      </label>
+      <p class="hint">Создайте ключ на console.anthropic.com → API Keys. Ключ хранится только в этом браузере и отправляется только в Anthropic.</p>
+
+      <label>Голос
+        <select id="voice"></select>
+      </label>
+
+      <label>Скорость речи
+        <input id="rate" type="range" min="0.7" max="1.5" step="0.05">
+      </label>
+
+      <label class="check">
+        <input id="wake" type="checkbox"> Ждать слово «Джарвис»
+      </label>
+      <p class="hint">Если выключено, Джарвис отвечает на всё, что слышит.</p>
+
+      <label class="check">
+        <input id="speak" type="checkbox"> Отвечать голосом
+      </label>
+
+      <div class="dialog-actions">
+        <button id="testVoice" type="button" class="ghost">Проверить голос</button>
+        <button value="ok" class="send">Готово</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="drop" class="drop" hidden>Отпустите файл, чтобы прикрепить</div>
+
+  <script type="module" src="jarvis.js"></script>
+</body>
+</html>
