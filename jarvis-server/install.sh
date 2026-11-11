@@ -48,7 +48,7 @@ if ! command -v uv >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/uv" ]]; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 UV="$(command -v uv || echo "$HOME/.local/bin/uv")"
-"$UV" venv --quiet --python 3.12 "$DIR/.venv"
+[[ -x "$DIR/.venv/bin/python" ]] || "$UV" venv --quiet --python 3.12 "$DIR/.venv"
 "$UV" pip install --quiet --python "$DIR/.venv/bin/python" -r "$DIR/requirements.txt"
 ok "Python $("$DIR/.venv/bin/python" -c 'import sys; print(sys.version.split()[0])'), библиотеки установлены"
 
