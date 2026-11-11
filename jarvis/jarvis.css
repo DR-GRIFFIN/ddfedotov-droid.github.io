@@ -26,6 +26,8 @@ button, input, select { font: inherit; color: inherit; }
   padding: 12px 16px; border-bottom: 1px solid var(--line);
 }
 .brand { letter-spacing: .3em; font-weight: 600; color: var(--accent); font-size: 14px; }
+.mode { letter-spacing: normal; font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
+@media (max-width: 420px) { .mode { display: none; } }
 .top-actions { display: flex; gap: 8px; }
 
 .ghost {
@@ -78,6 +80,7 @@ body[data-state="speaking"] .orb .ring { border-color: var(--accent-2); }
 .msg.user { align-self: flex-end; background: #16325a; border-bottom-right-radius: 4px; }
 .msg.assistant { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
 .msg.error { align-self: center; color: var(--danger); background: transparent; font-size: 14px; }
+.snapshot { align-self: flex-start; max-width: min(100%, 480px); border-radius: 12px; border: 1px solid var(--line); }
 .msg .files { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 
 .composer {
@@ -117,6 +120,9 @@ dialog {
 dialog::backdrop { background: rgba(0, 0, 0, .6); }
 .settings { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
 .settings h2 { margin: 0 0 4px; font-size: 18px; }
+.settings fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.settings legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.settings input[type="url"] { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
 .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .settings label.check { flex-direction: row; align-items: center; gap: 8px; }
 .settings input[type="password"], .settings select {

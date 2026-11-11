@@ -10,7 +10,7 @@
 </head>
 <body>
   <header class="top">
-    <span class="brand">J.A.R.V.I.S.</span>
+    <span class="brand">J.A.R.V.I.S. <span id="mode" class="mode"></span></span>
     <div class="top-actions">
       <button id="clearBtn" class="ghost" type="button" title="Начать новый разговор">Новый чат</button>
       <button id="settingsBtn" class="ghost" type="button" title="Настройки">Настройки</button>
@@ -50,10 +50,24 @@
     <form method="dialog" class="settings">
       <h2>Настройки</h2>
 
-      <label>Ключ Claude API
-        <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
-      </label>
-      <p class="hint">Создайте ключ на console.anthropic.com → API Keys. Ключ хранится только в этом браузере и отправляется только в Anthropic.</p>
+      <fieldset>
+        <legend>Домашний сервер (рекомендуется)</legend>
+        <label>Адрес сервера
+          <input id="serverUrl" type="url" autocomplete="off" placeholder="https://oldmac.….ts.net">
+        </label>
+        <label>Ключ доступа
+          <input id="serverKey" type="password" autocomplete="off" placeholder="из ./jarvis.sh key">
+        </label>
+        <p class="hint">Общая память с часами, термостат, камеры, сеть и файлы на Mac.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Или напрямую, без сервера</legend>
+        <label>Ключ Claude API
+          <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+        </label>
+        <p class="hint">Только разговор. Ключ с console.anthropic.com хранится в этом браузере и отправляется только в Anthropic. Если указан сервер, используется он.</p>
+      </fieldset>
 
       <label>Голос
         <select id="voice"></select>

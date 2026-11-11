@@ -1,10 +1,12 @@
-// Джарвис: голосовой ассистент в браузере на Claude API.
-// Речь распознаётся и озвучивается средствами браузера (Web Speech API),
-// ответы даёт Claude. Ключ API, настройки и история хранятся только в этом браузере.
-import Anthropic from "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm";
-
-const MODEL = "claude-opus-5-5";
-const MAX_SENT_MESSAGES = 40;          // сколько последних сообщений отправлять в Claude
+// Джарвис: голосовой ассистент в браузере.
+// Речь распознаётся и озвучивается средствами браузера (Web Speech API).
+// Два режима:
+//  * через домашний сервер (jarvis-server): общая память с часами, термостат, камеры, сеть, файлы;
+//  * напрямую в Claude API с ключом в браузере: только разговор.
+// Настройки и ключи хранятся только в этом браузере.
+const SDK_URL = "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm";
+const MODEL = "claude-haiku-5-5";
+const MAX_SENT_MESSAGES = 40;          // сколько последних сообщений отправлять в Claude (прямой режим)
 const FOLLOW_UP_MS = 7000;             // после ответа можно продолжать без слова «Джарвис»
 const WAKE_RE = /(?:^|[\s,.!?])(джарвис|джарвиз|жарвис|джервис|jarvis)[\s,.!?:-]*/i;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -17,6 +19,7 @@ const els = {
   attachments: $("attachments"), drop: $("drop"), clear: $("clearBtn"),
   settingsBtn: $("settingsBtn"), dialog: $("settings"), apiKey: $("apiKey"),
   voice: $("voice"), rate: $("rate"), wake: $("wake"), speak: $("speak"), testVoice: $("testVoice"),
+  serverUrl: $("serverUrl"), serverKey: $("serverKey"), mode: $("mode"),
 };
 
 // ---------- хранилище ----------
@@ -31,14 +34,19 @@ const store = {
 };
 
 const settings = Object.assign(
-  { apiKey: "", voiceURI: "", rate: 1.05, wake: true, speak: true },
+  { apiKey: "", serverUrl: "", serverKey: "", voiceURI: "", rate: 1.05, wake: true, speak: true },
   store.get("settings", {}),
 );
 const saveSettings = () => store.set("settings", settings);
+const serverMode = () => Boolean(settings.serverUrl && settings.serverKey);
+const configured = () => serverMode() || Boolean(settings.apiKey);
 
-// Ход разговора: { role, content (что сохраняется), live (полное содержимое с файлами, только в этой вкладке), display }
-let turns = store.get("history", []);
-const saveHistory = () => store.set("history", turns.map(({ live, ...t }) => t));
+// История прямого режима: { role, content (только текст), display }.
+// В Claude уходит только текст прошлых реплик, поэтому её можно спокойно обрезать.
+let turns = store.get("history", []).map((t) => (
+  t.role === "assistant" && typeof t.content !== "string" ? { ...t, content: t.display?.text ?? "" } : t
+));
+const saveHistory = () => store.set("history", turns);
 
 // ---------- состояние ----------
 let active = false;          // Джарвис включён и слушает
@@ -66,6 +74,15 @@ function goIdle() {
 }
 
 // ---------- журнал на экране ----------
+function addImage(base64, mime = "image/jpeg") {
+  const img = document.createElement("img");
+  img.className = "snapshot";
+  img.alt = "Снимок с камеры";
+  img.src = `data:${mime};base64,${base64}`;
+  els.log.append(img);
+  img.scrollIntoView({ block: "end", behavior: "smooth" });
+}
+
 function addMsg(role, text, files = []) {
   const div = document.createElement("div");
   div.className = "msg " + role;
@@ -82,7 +99,26 @@ function addMsg(role, text, files = []) {
   div.scrollIntoView({ block: "end", behavior: "smooth" });
   return body;
 }
-for (const t of turns) addMsg(t.role, t.display?.text ?? "", t.display?.files ?? []);
+function renderLocalHistory() {
+  els.log.innerHTML = "";
+  for (const t of turns) addMsg(t.role, t.display?.text ?? "", t.display?.files ?? []);
+}
+
+// Общая история с сервера: что говорили с часов и телефона, тоже видно здесь.
+async function loadServerHistory() {
+  try {
+    const data = await serverCall("/api/history?limit=60");
+    els.log.innerHTML = "";
+    for (const m of data.messages) {
+      const text = m.role === "user" ? m.content.replace(/^\[[^\]]*\]\n/, "") : m.content;
+      addMsg(m.role, text);
+    }
+  } catch (err) {
+    els.log.innerHTML = "";
+    addMsg("error", explainServerError(err));
+  }
+}
+function renderHistory() { serverMode() ? loadServerHistory() : renderLocalHistory(); }
 
 // ---------- озвучка ----------
 const synth = window.speechSynthesis;
@@ -238,13 +274,14 @@ async function addFiles(files) {
     try {
       if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
         const data = (await readAs(file, "url")).split(",")[1];
-        pending.push({ name: file.name, block: { type: "document", title: file.name, source: { type: "base64", media_type: "application/pdf", data } } });
+        pending.push({ name: file.name, mime: "application/pdf", data, block: { type: "document", title: file.name, source: { type: "base64", media_type: "application/pdf", data } } });
       } else if (IMAGE_TYPES.includes(file.type)) {
         const data = (await readAs(file, "url")).split(",")[1];
-        pending.push({ name: file.name, block: { type: "image", source: { type: "base64", media_type: file.type, data } } });
+        pending.push({ name: file.name, mime: file.type, data, block: { type: "image", source: { type: "base64", media_type: file.type, data } } });
       } else {
         const text = await readAs(file, "text");
-        pending.push({ name: file.name, text, block: { type: "text", text: `Файл «${file.name}»:\n\n${text}` } });
+        const data = (await readAs(file, "url")).split(",")[1];
+        pending.push({ name: file.name, mime: "text/plain", data, block: { type: "text", text: `Файл «${file.name}»:\n\n${text}` } });
       }
     } catch {
       addMsg("error", `Не удалось прочитать «${file.name}».`);
@@ -280,31 +317,67 @@ addEventListener("drop", (e) => {
 });
 
 // ---------- Claude ----------
-function systemPrompt() {
-  const now = new Date().toLocaleString("ru-RU", { dateStyle: "full", timeStyle: "short" });
-  return [
-    "Ты — Джарвис, личный голосовой ассистент владельца этой страницы. Характер: спокойный, вежливый, собранный, с лёгкой сухой иронией, как у хорошего дворецкого. Обращайся на «вы».",
-    "Твои ответы озвучиваются синтезатором речи, поэтому:",
-    "- отвечай коротко, 1–4 предложения, если не просят подробнее;",
-    "- пиши обычным разговорным текстом: без markdown, заголовков, списков со звёздочками, таблиц и эмодзи;",
-    "- если нужен код или длинный текст, скажи одной фразой, что он на экране, и приведи его.",
-    "Отвечай на языке собеседника; по умолчанию — по-русски.",
-    "Распознавание речи иногда ошибается в словах. Если фраза звучит странно, пойми её по смыслу, а если смысл неясен — переспроси.",
-    "Если пользователь прикрепил файлы, опирайся на их содержимое. Если ответ требует того, к чему у тебя нет доступа (интернет, почта, календарь, файлы на компьютере), прямо скажи об этом.",
-    `Сейчас: ${now}.`,
-  ].join("\n");
+// Системный подсказ не меняется между запросами (дата идёт в сообщение пользователя):
+// у новых моделей Claude правка начала разговора ломает сохранённые размышления.
+const SYSTEM_PROMPT = [
+  "Ты — Джарвис, личный голосовой ассистент владельца этой страницы. Характер: спокойный, вежливый, собранный, с лёгкой сухой иронией, как у хорошего дворецкого. Обращайся на «вы».",
+  "Твои ответы озвучиваются синтезатором речи, поэтому:",
+  "- отвечай коротко, 1–4 предложения, если не просят подробнее;",
+  "- пиши обычным разговорным текстом: без markdown, заголовков, списков со звёздочками, таблиц и эмодзи;",
+  "- если нужен код или длинный текст, скажи одной фразой, что он на экране, и приведи его.",
+  "Отвечай на языке собеседника; по умолчанию — по-русски.",
+  "Распознавание речи иногда ошибается в словах. Если фраза звучит странно, пойми её по смыслу, а если смысл неясен — переспроси.",
+  "В начале сообщения пользователя в квадратных скобках — текущие дата и время, это служебная пометка.",
+  "Если пользователь прикрепил файлы, опирайся на их содержимое. Если ответ требует того, к чему у тебя нет доступа (интернет, почта, календарь, файлы на компьютере, умный дом), прямо скажи об этом.",
+].join("\n");
+
+function timeStamp() {
+  return "[" + new Date().toLocaleString("ru-RU", { dateStyle: "full", timeStyle: "short" }) + "]";
 }
 
-function messagesForApi() {
-  let list = turns.slice(-MAX_SENT_MESSAGES);
+function messagesForApi(current) {
+  // Старые реплики отрезаются блоками, чтобы начало истории менялось редко (так работает кэш).
+  const step = MAX_SENT_MESSAGES / 2;
+  const start = turns.length > MAX_SENT_MESSAGES ? Math.floor((turns.length - MAX_SENT_MESSAGES) / step + 1) * step : 0;
+  let list = turns.slice(start);
   while (list.length && list[0].role !== "user") list = list.slice(1);
-  return list.map((t) => ({ role: t.role, content: t.live ?? t.content }));
+  return [...list.map((t) => ({ role: t.role, content: t.content })), current];
+}
+
+async function serverCall(path, body, signal) {
+  const base = settings.serverUrl.replace(/\/+$/, "");
+  let resp;
+  try {
+    resp = await fetch(base + path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { Authorization: "Bearer " + settings.serverKey, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
+    });
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    const e = new Error("unreachable"); e.unreachable = true; throw e;
+  }
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) { const e = new Error(data.error || resp.statusText); e.status = resp.status; throw e; }
+  return data;
+}
+
+function explainServerError(err) {
+  if (err?.unreachable) return "Сервер Джарвиса недоступен. Проверьте, что Mac включён, а Tailscale Funnel работает (./jarvis.sh status).";
+  if (err?.status === 401) return "Ключ доступа к серверу не подошёл. Проверьте его в настройках (./jarvis.sh key на Mac).";
+  if (err?.status === 429) return "Слишком много неверных попыток. Подождите 15 минут.";
+  return err?.message || "Ошибка сервера.";
+}
+
+function speakText(text) {
+  for (const part of text.match(/[^.!?…]+[.!?…]*\s*/g) || [text]) speakNow(part);
 }
 
 async function send(text) {
   text = (text || "").trim();
   if (!text && !pending.length) return;
-  if (!settings.apiKey) { openSettings(); addMsg("error", "Сначала вставьте ключ Claude API в настройках."); return; }
+  if (!configured()) { openSettings(); addMsg("error", "Сначала укажите сервер Джарвиса или ключ Claude API в настройках."); return; }
 
   busy = true;
   stopRec();
@@ -315,34 +388,59 @@ async function send(text) {
   pending = [];
   renderPending();
   const userText = text || "Посмотри прикреплённые файлы.";
-  const live = [...files.map((f) => f.block), { type: "text", text: userText }];
-  const saved = [
-    ...files.map((f) => (f.text != null && f.text.length <= 20000)
-      ? f.block
-      : { type: "text", text: `[Ранее был прикреплён файл «${f.name}»; в этой сессии его содержимое уже недоступно.]` }),
-    { type: "text", text: userText },
-  ];
-  const userTurn = { role: "user", content: saved, live, display: { text: userText, files: files.map((f) => f.name) } };
-  turns.push(userTurn);
-  addMsg("user", userText, userTurn.display.files);
-
+  const fileNames = files.map((f) => f.name);
+  addMsg("user", userText, fileNames);
   setState("thinking", "Думаю…");
+  abortCtl = new AbortController();
+
+  try {
+    if (serverMode()) {
+      await sendViaServer(userText, files, abortCtl.signal);
+    } else {
+      await sendDirect(userText, files, fileNames, abortCtl.signal);
+    }
+    await waitSpeech();
+    if (active) armFollowUp(FOLLOW_UP_MS);
+  } catch (err) {
+    if (err?.name === "AbortError" || /abort/i.test(err?.message ?? "")) {
+      // остановлено пользователем
+    } else {
+      addMsg("error", serverMode() ? explainServerError(err) : explainError(err));
+    }
+  } finally {
+    abortCtl = null;
+    goIdle();
+  }
+}
+
+async function sendViaServer(userText, files, signal) {
+  const payload = {
+    text: userText,
+    source: "web",
+    files: files.map((f) => ({ name: f.name, mime: f.mime, data: f.data })),
+  };
+  const data = await serverCall("/api/ask", payload, signal);
+  addMsg("assistant", data.reply);
+  for (const img of data.images || []) addImage(img.data, img.mime);
+  speakText(data.reply);
+}
+
+async function sendDirect(userText, files, fileNames, signal) {
+  const { default: Anthropic } = await import(SDK_URL);
+  const stamped = `${timeStamp()}\n${userText}`;
+  const current = { role: "user", content: [...files.map((f) => f.block), { type: "text", text: stamped }] };
   const out = addMsg("assistant", "");
   let full = "";
   let sentenceBuf = "";
-
   try {
     const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
-    abortCtl = new AbortController();
-    const stream = client.beta.messages.stream({
+    const stream = client.messages.stream({
       model: MODEL,
-      max_tokens: 16000,
-      system: systemPrompt(),
-      messages: messagesForApi(),
+      max_tokens: 8000,
+      system: SYSTEM_PROMPT,
+      messages: messagesForApi(current),
       output_config: { effort: "low" },          // быстрые ответы для разговора
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",                     // если модель откажет, запрос сам уйдёт на запасную
-    }, { signal: abortCtl.signal });
+    }, { signal });
 
     for await (const event of stream) {
       if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
@@ -362,27 +460,18 @@ async function send(text) {
     speakNow(sentenceBuf);
 
     if (msg.stop_reason === "refusal") {
-      turns.pop();
       out.textContent = "С этим я помочь не могу.";
       speakNow(out.textContent);
-    } else {
-      turns.push({ role: "assistant", content: msg.content, display: { text: full } });
+      return;
     }
+    // В историю — только текст: файлы и размышления модели не пересылаются заново.
+    const filesNote = fileNames.length ? `\n[Были прикреплены файлы: ${fileNames.join(", ")}]` : "";
+    turns.push({ role: "user", content: stamped + filesNote, display: { text: userText, files: fileNames } });
+    turns.push({ role: "assistant", content: full || "…", display: { text: full } });
     saveHistory();
-    await waitSpeech();
-    if (active) armFollowUp(FOLLOW_UP_MS);
   } catch (err) {
-    turns.pop();
-    saveHistory();
     out.parentElement.remove();
-    if (err?.name === "AbortError" || /abort/i.test(err?.message ?? "")) {
-      // остановлено пользователем
-    } else {
-      addMsg("error", explainError(err));
-    }
-  } finally {
-    abortCtl = null;
-    goIdle();
+    throw err;
   }
 }
 
@@ -404,7 +493,7 @@ els.orb.addEventListener("click", () => {
     stopSpeech();
     return;
   }
-  if (!settings.apiKey) { openSettings(); return; }
+  if (!configured()) { openSettings(); return; }
   if (!SR) { addMsg("error", "Этот браузер не умеет распознавать речь. Откройте страницу в Chrome или Safari, или пишите текстом."); return; }
   active = !active;
   awaitingCommand = false;
@@ -423,7 +512,7 @@ els.orb.addEventListener("click", () => {
 els.mic.addEventListener("click", () => {
   if (!SR) { addMsg("error", "Этот браузер не умеет распознавать речь."); return; }
   if (busy) return;
-  if (!settings.apiKey) { openSettings(); return; }
+  if (!configured()) { openSettings(); return; }
   beep();
   armFollowUp(10000);
   setState("listening", "Слушаю…");
@@ -438,9 +527,12 @@ els.form.addEventListener("submit", (e) => {
   send(t);
 });
 
-els.clear.addEventListener("click", () => {
-  if (!turns.length) return;
-  if (!confirm("Начать новый разговор? Текущая история удалится.")) return;
+els.clear.addEventListener("click", async () => {
+  const where = serverMode() ? " Она удалится и на сервере: часы тоже начнут разговор заново." : "";
+  if (!confirm("Начать новый разговор? Текущая история удалится." + where)) return;
+  if (serverMode()) {
+    try { await serverCall("/api/reset", {}); } catch (err) { addMsg("error", explainServerError(err)); return; }
+  }
   turns = [];
   saveHistory();
   els.log.innerHTML = "";
@@ -448,6 +540,8 @@ els.clear.addEventListener("click", () => {
 
 function openSettings() {
   els.apiKey.value = settings.apiKey;
+  els.serverUrl.value = settings.serverUrl;
+  els.serverKey.value = settings.serverKey;
   els.rate.value = settings.rate;
   els.wake.checked = settings.wake;
   els.speak.checked = settings.speak;
@@ -456,14 +550,29 @@ function openSettings() {
 }
 els.settingsBtn.addEventListener("click", openSettings);
 els.dialog.addEventListener("close", () => {
+  const wasServer = serverMode();
+  const oldServer = settings.serverUrl + "|" + settings.serverKey;
   settings.apiKey = els.apiKey.value.trim();
+  settings.serverUrl = els.serverUrl.value.trim();
+  settings.serverKey = els.serverKey.value.trim();
   settings.rate = parseFloat(els.rate.value) || 1;
   settings.wake = els.wake.checked;
   settings.speak = els.speak.checked;
   settings.voiceURI = els.voice.value;
   saveSettings();
+  updateModeLabel();
+  if (wasServer !== serverMode() || oldServer !== settings.serverUrl + "|" + settings.serverKey) renderHistory();
   if (!busy) setState(document.body.dataset.state, idleStatus());
 });
+
+function updateModeLabel() {
+  els.mode.textContent = serverMode() ? "через сервер" : settings.apiKey ? "напрямую" : "";
+  els.mode.title = serverMode()
+    ? "Общая память с часами, термостат, камеры, сеть и файлы"
+    : "Только разговор, без домашних подключений";
+}
+updateModeLabel();
+renderHistory();
 els.testVoice.addEventListener("click", () => {
   settings.voiceURI = els.voice.value;
   settings.rate = parseFloat(els.rate.value) || 1;
