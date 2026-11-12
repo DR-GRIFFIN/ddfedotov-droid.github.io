@@ -102,6 +102,11 @@ speedtest_every_min = 60  # каждый замер ≈ 35 МБ трафика
 [files]
 folders = [$FOLDERS_TOML]
 
+[purchases]
+enabled = false           # чеки из Google Drive: docs/purchases.md
+folder = ""
+scan_every_min = 30
+
 [notify]
 ntfy_topic = ""           # docs/notifications.md
 EOF

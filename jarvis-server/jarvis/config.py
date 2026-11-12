@@ -50,6 +50,14 @@ class FilesConfig:
 
 
 @dataclass
+class PurchasesConfig:
+    enabled: bool = False
+    # Папка с чеками (PDF или фото), например синхронизированная Google Drive.
+    folder: str = ""
+    scan_every_min: int = 30
+
+
+@dataclass
 class NotifyConfig:
     # Тема ntfy.sh. Пусто = уведомления выключены.
     ntfy_topic: str = ""
@@ -73,6 +81,7 @@ class Config:
     blink: BlinkConfig = field(default_factory=BlinkConfig)
     network: NetworkConfig = field(default_factory=NetworkConfig)
     files: FilesConfig = field(default_factory=FilesConfig)
+    purchases: PurchasesConfig = field(default_factory=PurchasesConfig)
     notify: NotifyConfig = field(default_factory=NotifyConfig)
 
     @property
@@ -89,6 +98,7 @@ _SECTIONS = {
     "blink": BlinkConfig,
     "network": NetworkConfig,
     "files": FilesConfig,
+    "purchases": PurchasesConfig,
     "notify": NotifyConfig,
 }
 

@@ -28,6 +28,7 @@ from .tools import blink as blink_tools
 from .tools import files as files_tools
 from .tools import memory as memory_tools
 from .tools import network as network_tools
+from .tools import purchases as purchases_tools
 from .tools import thermostat as thermostat_tools
 
 log = logging.getLogger(__name__)
@@ -163,6 +164,7 @@ def build_app(cfg: Config, db: DB | None = None, brain: Brain | None = None, sta
                 "blink": cfg.blink.enabled and cfg.blink_credentials_path.exists(),
                 "network": cfg.network.enabled,
                 "files": len(cfg.files.folders),
+                "purchases": cfg.purchases.enabled,
                 "notifications": bool(cfg.notify.ntfy_topic),
                 "facts": len(db.facts()),
             }
@@ -183,22 +185,32 @@ def build_app(cfg: Config, db: DB | None = None, brain: Brain | None = None, sta
         if brain is not None:
             state["brain"] = brain
         else:
+            import anthropic
+
+            claude = anthropic.AsyncAnthropic(api_key=cfg.anthropic_api_key, timeout=120, max_retries=2)
+            purchases = purchases_tools.Purchases(cfg.purchases, db, claude, cfg.model)
+            state["purchases"] = purchases
             blink_svc = blink_tools.BlinkService(cfg.blink, cfg.blink_credentials_path, session)
             toolbox = Toolbox(
                 thermostat_tools.make_tools(cfg.thermostat)
                 + blink_tools.make_tools(blink_svc)
                 + network_tools.make_tools(monitor)
                 + files_tools.make_tools(cfg.files)
+                + purchases_tools.make_tools(purchases)
                 + memory_tools.make_tools(db)
             )
-            state["brain"] = Brain(cfg, db, toolbox)
+            state["brain"] = Brain(cfg, db, toolbox, client=claude)
         if start_background:
             monitor.start()
+            if "purchases" in state:
+                state["purchases"].start()
         log.info("Джарвис %s готов: http://%s:%s (модель %s)", __version__, cfg.host, cfg.port, cfg.model)
 
     async def on_cleanup(app):
         if "monitor" in state:
             await state["monitor"].stop()
+        if "purchases" in state:
+            await state["purchases"].stop()
         if "session" in state:
             await state["session"].close()
 

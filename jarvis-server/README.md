@@ -15,6 +15,7 @@ Mac: сервер Джарвиса ──► Claude API (Haiku 5.5)
         ├── камеры Blink       (blinkpy)
         ├── статистика сети    (замеры с самого Mac)
         ├── файлы на Mac       (только чтение, только выбранные папки)
+        ├── чеки покупок       (PDF из Google Drive → база цен)
         └── память             (общая для часов, телефона и страницы)
 ```
 
@@ -63,6 +64,7 @@ cd jarvis-repo/jarvis-server
 | Доступ снаружи | `./jarvis.sh funnel` | [docs/tailscale.md](docs/tailscale.md) |
 | Термостат Ecobee | Три команды на Mac, `[thermostat] enabled = true` | [docs/ecobee.md](docs/ecobee.md) |
 | Камеры Blink | `./jarvis.sh blink-login`, `[blink] enabled = true` | [docs/blink.md](docs/blink.md) |
+| Чеки покупок | Папка Google Drive в `[purchases]` | [docs/purchases.md](docs/purchases.md) |
 | Уведомления | Тема ntfy в `[notify]` | [docs/notifications.md](docs/notifications.md) |
 | Веб-страница | «Настройки» → адрес сервера и ключ | `../jarvis/README.md` |
 

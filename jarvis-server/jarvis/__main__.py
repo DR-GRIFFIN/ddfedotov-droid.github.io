@@ -29,25 +29,54 @@ def cmd_ask(args):
     from .db import DB
     from .notify import Notifier
     from .tools import Toolbox
-    from .tools import blink, files, memory, network, thermostat
+    import anthropic
+
+    from .tools import blink, files, memory, network, purchases, thermostat
 
     cfg = load_config()
 
     async def run():
         async with aiohttp.ClientSession() as session:
             db = DB(cfg.db_path)
+            claude = anthropic.AsyncAnthropic(api_key=cfg.anthropic_api_key)
             mon = network.NetworkMonitor(cfg.network, db, Notifier(cfg.notify, session), session)
             toolbox = Toolbox(
                 thermostat.make_tools(cfg.thermostat)
                 + blink.make_tools(blink.BlinkService(cfg.blink, cfg.blink_credentials_path, session))
                 + network.make_tools(mon)
                 + files.make_tools(cfg.files)
+                + purchases.make_tools(purchases.Purchases(cfg.purchases, db, claude, cfg.model))
                 + memory.make_tools(db)
             )
-            result = await Brain(cfg, db, toolbox).ask(" ".join(args.text), source="cli")
+            result = await Brain(cfg, db, toolbox, client=claude).ask(" ".join(args.text), source="cli")
             print(result["reply"])
             if result["tools"]:
                 print(f"(инструменты: {', '.join(result['tools'])})")
+
+    asyncio.run(run())
+
+
+def cmd_receipts(args):
+    """Загрузить новые чеки из папки сейчас и показать итог."""
+    import anthropic
+
+    from .db import DB
+    from .tools.purchases import Purchases
+
+    cfg = load_config()
+    if not cfg.purchases.enabled or not cfg.purchases.folder:
+        sys.exit("Чеки не подключены: заполните раздел [purchases] в config.toml (docs/purchases.md).")
+
+    async def run():
+        p = Purchases(cfg.purchases, DB(cfg.db_path), anthropic.AsyncAnthropic(api_key=cfg.anthropic_api_key), cfg.model)
+        print(f"Папка: {p.folder}, файлов-кандидатов: {len(p.candidates())}")
+        n = await p.import_new()
+        rows = p.db.query("SELECT status, COUNT(*) n FROM receipts GROUP BY status")
+        print(f"Загружено новых: {n}. В базе: " + ", ".join(f"{r['status']}={r['n']}" for r in rows))
+        for r in p.db.query("SELECT file, error FROM receipts WHERE status = 'error' ORDER BY id DESC LIMIT 5"):
+            print(f"  ошибка: {Path(r['file']).name}: {r['error']}")
+
+    from pathlib import Path
 
     asyncio.run(run())
 
@@ -119,6 +148,13 @@ def cmd_doctor(args):
     if not cfg.files.folders:
         line(None, "Доступ к файлам не настроен")
 
+    if cfg.purchases.enabled:
+        from pathlib import Path
+
+        folder = Path(cfg.purchases.folder).expanduser()
+        line(folder.is_dir(), f"Папка с чеками: {folder}" + ("" if folder.is_dir() else " — не найдена (Google Drive запущен?)"))
+    else:
+        line(None, "Чеки выключены")
     line(None, "Уведомления ntfy: " + ("включены" if cfg.notify.ntfy_topic else "выключены"))
     print("\nВсё в порядке." if ok else "\nЕсть что поправить (см. ❌ выше).")
     sys.exit(0 if ok else 1)
@@ -135,6 +171,7 @@ def main(argv=None):
     a.add_argument("text", nargs="+")
     a.set_defaults(fn=cmd_ask)
     sub.add_parser("blink-login", help="войти в Blink").set_defaults(fn=cmd_blink_login)
+    sub.add_parser("receipts", help="загрузить новые чеки из папки").set_defaults(fn=cmd_receipts)
     k = sub.add_parser("key", help="показать или создать ключ доступа")
     k.add_argument("--new", action="store_true", help="создать новый ключ (старый перестанет работать)")
     k.set_defaults(fn=cmd_key)

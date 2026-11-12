@@ -26,7 +26,7 @@ case "$cmd" in
     if curl -fsS "http://127.0.0.1:$(port)/health"; then echo; echo "Работает на порту $(port)."
     else echo "Не отвечает. Журнал: ./jarvis.sh logs"; fi ;;
   logs)    tail -n "${1:-80}" -f "$JARVIS_HOME/logs/jarvis.log" ;;
-  doctor|key|blink-login|ask)
+  doctor|key|blink-login|ask|receipts)
     need_install; cd "$DIR"; exec "$PY" -m jarvis "$cmd" "$@" ;;
   funnel)
     TS="$(tailscale_bin)"
@@ -62,6 +62,7 @@ case "$cmd" in
   ask "текст"   задать вопрос из Терминала
   key [--new]   показать ключ доступа | создать новый
   blink-login   войти в Blink
+  receipts      загрузить новые чеки из папки сейчас
   funnel        открыть доступ с часов через Tailscale Funnel
   funnel-off    закрыть доступ снаружи
   update        обновить из GitHub и перезапустить
