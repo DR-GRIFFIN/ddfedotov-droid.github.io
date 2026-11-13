@@ -182,3 +182,35 @@ def test_history_trimmed_in_chunks_and_starts_with_user():
     assert h1[0]["role"] == "user" and h2[0]["role"] == "user"
     assert len(h1) <= 40 and len(h2) <= 40
     assert h1[0] == h2[0]  # начало истории не сдвигается с каждым вопросом
+
+
+def test_recent_events_include_usb_clips(monkeypatch):
+    import datetime as dt
+    from types import SimpleNamespace
+
+    now = dt.datetime.now(dt.timezone.utc)
+
+    class LocalSync(FakeSync):
+        local_storage = True
+        name = "Дом"
+
+        def __init__(self):
+            super().__init__()
+            self._local_storage = {"manifest": []}
+
+        async def update_local_storage_manifest(self):
+            self._local_storage["manifest"] = [
+                SimpleNamespace(name="Входная дверь", created_at=now - dt.timedelta(hours=2)),
+                SimpleNamespace(name="Двор", created_at=now - dt.timedelta(days=3)),  # старая
+            ]
+
+    svc = FakeService()
+    svc.fake.sync = {"Дом": LocalSync()}
+
+    async def no_cloud(**kwargs):
+        return []
+
+    svc.fake.get_videos_metadata = no_cloud
+    res = run(Toolbox(blink.make_tools(svc)).run("blink_recent_events", {"hours": 24, "with_pictures": False}, TurnContext(1, "web")))
+    assert "Записей за 24 ч: 1." in res.text
+    assert "Входная дверь" in res.text and "флешка" in res.text and "Двор" not in res.text

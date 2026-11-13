@@ -86,6 +86,28 @@ def save_credentials(attrs: dict, path: Path):
     os.replace(tmp, path)
 
 
+async def local_clips(blink, svc: BlinkService, since: dt.datetime) -> list[tuple[dt.datetime, str]]:
+    """Записи на флешке Sync Module 2 (без подписки Blink видео хранится там)."""
+    result = []
+    for sync in blink.sync.values():
+        if not getattr(sync, "local_storage", False):
+            continue
+        try:
+            await sync.update_local_storage_manifest()
+            manifest = sync._local_storage.get("manifest", [])  # в blinkpy нет публичного доступа к списку
+        except Exception as e:
+            log.info("Не удалось прочитать флешку модуля %s: %s", getattr(sync, "name", "?"), e)
+            continue
+        for item in manifest:
+            when = item.created_at
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=dt.timezone.utc)
+            when = when.astimezone()
+            if when >= since and svc.allowed(item.name):
+                result.append((when, item.name))
+    return result
+
+
 def _camera(blink, svc: BlinkService, name: str):
     cams = {n: c for n, c in blink.cameras.items() if svc.allowed(n)}
     if not cams:
@@ -150,16 +172,21 @@ def make_tools(svc: BlinkService) -> list[Tool]:
         since = dt.datetime.now() - dt.timedelta(hours=hours)
         videos = await blink.get_videos_metadata(since=since.strftime("%Y/%m/%d %H:%M:%S"), stop=4)
         videos = [v for v in videos if svc.allowed(v.get("device_name", ""))]
-        if not videos:
+        local = await local_clips(blink, svc, since.astimezone())
+        if not videos and not local:
             return f"За последние {hours} ч записей движения нет."
-        lines = [f"Записей за {hours} ч: {len(videos)}."]
-        for v in videos[:30]:
-            when = v.get("created_at", "?")
+        entries = []  # (время, камера, где хранится)
+        for v in videos:
             try:
-                when = dt.datetime.fromisoformat(when.replace("Z", "+00:00")).astimezone().strftime("%d.%m %H:%M")
-            except Exception:
-                pass
-            lines.append(f"- {when}, камера «{v.get('device_name', '?')}»")
+                when = dt.datetime.fromisoformat(v.get("created_at", "").replace("Z", "+00:00")).astimezone()
+            except ValueError:
+                continue
+            entries.append((when, v.get("device_name", "?"), "облако"))
+        entries += [(when, cam, "флешка") for when, cam in local]
+        entries.sort(key=lambda e: e[0], reverse=True)
+        lines = [f"Записей за {hours} ч: {len(entries)}."]
+        for when, cam, where in entries[:30]:
+            lines.append(f"- {when:%d.%m %H:%M}, камера «{cam}» ({where})")
         images = []
         if args["with_pictures"]:
             for v in videos[:3]:
