@@ -48,6 +48,7 @@ const STEPS = {
   },
   2: {
     title: 'q2Title',
+    skip: { experience: 'new' },
     body: (a) => [
       choice('experience', 'never', a.experience, 'expNever'),
       choice('experience', 'new', a.experience, 'expNew'),
@@ -57,6 +58,7 @@ const STEPS = {
   },
   3: {
     title: 'q3Title',
+    skip: { goal: 'recomp' },
     body: (a) => [
       choice('goal', 'lose', a.goal, 'goalLose', 'goalLoseHint'),
       choice('goal', 'recomp', a.goal, 'goalRecomp', 'goalRecompHint'),
@@ -67,6 +69,7 @@ const STEPS = {
   },
   4: {
     title: 'q4Title',
+    skip: { days: [1, 3, 5], minutes: 60 },
     body: (a) => `
       <p class="label">${esc(t('q4Days'))}</p>
       <div class="chips">
@@ -90,6 +93,7 @@ const STEPS = {
   },
   5: {
     title: 'q5Title',
+    skip: { where: 'gym' },
     body: (a) => [
       choice('where', 'gym', a.where, 'whereGym', 'whereGymHint'),
       choice('where', 'dumbbells', a.where, 'whereDb', 'whereDbHint'),
@@ -98,6 +102,7 @@ const STEPS = {
   },
   6: {
     title: 'q6Title',
+    skip: { activity: 'low' },
     body: (a) => [
       choice('activity', 'low', a.activity, 'actLow', 'actLowHint'),
       choice('activity', 'mid', a.activity, 'actMid', 'actMidHint'),
@@ -126,6 +131,7 @@ const STEPS = {
   },
   8: {
     title: 'q8Title',
+    skip: { pain: {} },
     hint: 'q8Hint',
     body: (a) => `
       <div class="chips">
@@ -172,6 +178,7 @@ export function onboarding(root, { params }) {
           ${n > 1 ? `<button type="button" class="btn ghost" data-act="back">${esc(t('back'))}</button>` : ''}
           <button type="submit" class="btn">${esc(t(n === TOTAL_STEPS ? 'done' : 'next'))}</button>
         </div>
+        ${step.skip ? `<button type="button" class="link-btn skip-btn" data-act="skip">${esc(t('skip'))}</button>` : ''}
       </form>
     </main>`;
 
@@ -198,6 +205,19 @@ export function onboarding(root, { params }) {
   });
 
   root.querySelector('[data-act="back"]')?.addEventListener('click', () => go(`/onboarding/${n - 1}`));
+
+  // Skip keeps any earlier answer and fills only what's missing with a sensible default.
+  // Step 1 (needed for calorie targets) and step 7 (health safety) have no skip.
+  root.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
+    store.update((s) => {
+      for (const [key, value] of Object.entries(step.skip)) {
+        if (s.onboarding.answers[key] == null) s.onboarding.answers[key] = structuredClone(value);
+      }
+      s.onboarding.step = Math.min(TOTAL_STEPS, n + 1);
+    });
+    if (n < TOTAL_STEPS) go(`/onboarding/${n + 1}`);
+    else finish();
+  });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
