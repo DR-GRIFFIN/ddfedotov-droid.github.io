@@ -94,6 +94,18 @@ function lastTimeText(state, it) {
 // Exercises that have an interactive machine model in figures/ (built with the Anatomy skill).
 const FIGURES = new Set(['leg_press']);
 
+// Vertical technique video (YouTube Short), collapsed by default so the sets stay in view;
+// the player is created only when opened.
+function shortVideo(ex) {
+  if (!ex.video) return '';
+  return `
+    <details class="short-video" data-video="${esc(ex.video)}">
+      <summary>▶ ${esc(t('videoTechnique'))}</summary>
+      <div class="short-frame"></div>
+      <a class="link-btn" href="https://www.youtube.com/shorts/${esc(ex.video)}" target="_blank" rel="noopener">${esc(t('videoOpen'))}</a>
+    </details>`;
+}
+
 function videoBlock(ex, it) {
   if (FIGURES.has(ex.id)) {
     const dark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -101,20 +113,9 @@ function videoBlock(ex, it) {
     const params = new URLSearchParams({ embed: '1', reps: String(it?.max ?? 10) });
     if (kg) params.set('kg', String(kg));
     const src = `figures/${ex.id}${dark ? '' : '-light'}.html?${params}`;
-    const q = encodeURIComponent(t('videoQuery', { name: tr(ex.name) }));
-    return `
-      <div class="figure-embed"><iframe src="${esc(src)}" title="${esc(tr(ex.name))}" loading="lazy"></iframe></div>
-      <a class="link-btn" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">▶ ${esc(t('videoSearch'))}</a>`;
+    return `<div class="figure-embed"><iframe src="${esc(src)}" title="${esc(tr(ex.name))}" loading="lazy"></iframe></div>${shortVideo(ex)}`;
   }
-  if (ex.video) {
-    return `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${esc(ex.video)}" title="${esc(tr(ex.name))}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
-  }
-  const q = encodeURIComponent(t('videoQuery', { name: tr(ex.name) }));
-  return `
-    <div class="video placeholder">
-      <p class="muted small">${esc(t('videoSoon'))}</p>
-      <a class="btn secondary" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">▶ ${esc(t('videoSearch'))}</a>
-    </div>`;
+  return shortVideo(ex);
 }
 
 function exercise(root, index, rerender) {
@@ -169,6 +170,13 @@ function exercise(root, index, rerender) {
         <button type="button" class="btn" data-act="next">${esc(t(isLast ? 'finish' : 'nextEx'))}</button>
       </div>
     </main>`;
+
+  root.querySelector('.short-video')?.addEventListener('toggle', (e) => {
+    const box = e.target.querySelector('.short-frame');
+    if (e.target.open && !box.firstChild) {
+      box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(e.target.dataset.video)}?playsinline=1&rel=0" title="${esc(tr(ex.name))}" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+    }
+  });
 
   const setValue = (n, field, raw) => {
     const v = raw === '' ? null : Number(String(raw).replace(',', '.'));

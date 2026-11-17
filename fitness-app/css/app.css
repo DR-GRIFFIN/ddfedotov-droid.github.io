@@ -342,3 +342,10 @@ a.btn { text-decoration: none; }
 .figure-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
 .skip-row { display: flex; justify-content: center; gap: 24px; }
 .skip-btn { color: var(--muted); }
+.short-video { margin: 10px 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.short-video summary { cursor: pointer; padding: 12px 14px; font-weight: 600; color: var(--accent); list-style: none; }
+.short-video summary::-webkit-details-marker { display: none; }
+.short-video[open] summary { border-bottom: 1px solid var(--line); }
+.short-frame { width: min(100%, 320px); aspect-ratio: 9 / 16; margin: 12px auto 4px; border-radius: 12px; overflow: hidden; background: #000; }
+.short-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.short-video .link-btn { display: block; text-align: center; padding: 8px 0 12px; }
