@@ -19,6 +19,8 @@ const choice = (name, value, current, title, hint) => `
 const STEPS = {
   1: {
     title: 'q1Title',
+    // average adult male; targets are recalculated when the real weight is entered
+    skip: () => ({ name: t('guest'), age: 30, height: 178, weight: 80 }),
     body: (a) => `
       <label class="field">${esc(t('name'))}
         <input name="name" autocomplete="given-name" maxlength="40" value="${esc(a.name ?? '')}" required>
@@ -112,6 +114,8 @@ const STEPS = {
   },
   7: {
     title: 'q7Title',
+    // skipped health questions are not "all clear": Today keeps asking until they are answered
+    skip: () => ({ health: Object.fromEntries(HEALTH_QUESTIONS.map((q) => [q, false])), healthSkipped: true }),
     hint: 'q7Hint',
     body: (a) => HEALTH_QUESTIONS.map((q) => `
       <fieldset class="yesno">
@@ -126,7 +130,7 @@ const STEPS = {
         if (!v) return { error: 'hq_' + q };
         health[q] = v === 'yes';
       }
-      return { values: { health } };
+      return { values: { health, healthSkipped: false } };
     },
   },
   8: {
@@ -178,7 +182,10 @@ export function onboarding(root, { params }) {
           ${n > 1 ? `<button type="button" class="btn ghost" data-act="back">${esc(t('back'))}</button>` : ''}
           <button type="submit" class="btn">${esc(t(n === TOTAL_STEPS ? 'done' : 'next'))}</button>
         </div>
-        ${step.skip ? `<button type="button" class="link-btn skip-btn" data-act="skip">${esc(t('skip'))}</button>` : ''}
+        <div class="skip-row">
+          <button type="button" class="link-btn skip-btn" data-act="skip">${esc(t('skip'))}</button>
+          <button type="button" class="link-btn skip-btn" data-act="skip-all">${esc(t('skipAll'))}</button>
+        </div>
       </form>
     </main>`;
 
@@ -206,17 +213,27 @@ export function onboarding(root, { params }) {
 
   root.querySelector('[data-act="back"]')?.addEventListener('click', () => go(`/onboarding/${n - 1}`));
 
-  // Skip keeps any earlier answer and fills only what's missing with a sensible default.
-  // Step 1 (needed for calorie targets) and step 7 (health safety) have no skip.
-  root.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
+  // Skip keeps any earlier answer and fills only what's missing with a default.
+  root.querySelector('[data-act="skip"]').addEventListener('click', () => {
     store.update((s) => {
-      for (const [key, value] of Object.entries(step.skip)) {
-        if (s.onboarding.answers[key] == null) s.onboarding.answers[key] = structuredClone(value);
-      }
+      fillDefaults(s, n);
       s.onboarding.step = Math.min(TOTAL_STEPS, n + 1);
     });
     if (n < TOTAL_STEPS) go(`/onboarding/${n + 1}`);
     else finish();
+  });
+
+  // Skip all: fill every unanswered step and go straight to Today (for trying the app quickly).
+  root.querySelector('[data-act="skip-all"]').addEventListener('click', () => {
+    store.update((s) => {
+      // days not chosen yet: train today and every other day, so a workout is ready right away
+      if (s.onboarding.step <= 4 && n <= 4) {
+        const today = new Date().getDay() || 7;
+        s.onboarding.answers.days = [today, ((today + 1) % 7) + 1, ((today + 3) % 7) + 1].sort((x, y) => x - y);
+      }
+      for (let i = n; i <= TOTAL_STEPS; i++) fillDefaults(s, i);
+    });
+    finish({ quick: true });
   });
 
   form.addEventListener('submit', (e) => {
@@ -235,8 +252,19 @@ export function onboarding(root, { params }) {
   });
 }
 
+function fillDefaults(s, n) {
+  const step = STEPS[n];
+  const defaults = typeof step.skip === 'function' ? step.skip() : step.skip;
+  for (const [key, value] of Object.entries(defaults ?? {})) {
+    if (s.onboarding.answers[key] == null || (key === 'health' && !Object.keys(s.onboarding.answers.health ?? {}).length)) {
+      s.onboarding.answers[key] = structuredClone(value);
+    }
+  }
+}
+
 // Turns answers into profile, health status and a draft plan.
-function finish() {
+// quick: confirm the plan at once and open Today (used by "Skip all").
+function finish({ quick = false } = {}) {
   store.update((s) => {
     const a = s.onboarding.answers;
     s.profile = {
@@ -244,7 +272,7 @@ function finish() {
       experience: a.experience, activity: a.activity, where: a.where,
     };
     const result = screen(a);
-    s.health = { blocked: result.blocked, reasons: result.reasons, clearedAt: null, answers: a.health, pain: a.pain };
+    s.health = { blocked: result.blocked, reasons: result.reasons, clearedAt: null, answers: a.health, pain: a.pain, skipped: Boolean(a.healthSkipped) };
     const rec = recommend(a);
     s.plan = {
       program: rec.program,
@@ -254,11 +282,13 @@ function finish() {
       days: a.days,
       minutes: a.minutes,
       targets: targets({ ...a }),
-      confirmed: false,
-      startedAt: null,
+      confirmed: quick,
+      startedAt: s.plan?.startedAt ?? (quick ? dateKey() : null),
     };
-    s.weights = [{ date: dateKey(), kg: a.weight }];
+    // keep weight history when the questionnaire is answered again
+    s.weights = [...(s.weights ?? []).filter((w) => w.date !== dateKey()), { date: dateKey(), kg: a.weight }];
     s.onboarding.done = true;
   });
-  go(store.get().health.blocked ? '/health-stop' : '/plan');
+  const st = store.get();
+  go(st.health.blocked ? '/health-stop' : quick ? '/today' : '/plan');
 }

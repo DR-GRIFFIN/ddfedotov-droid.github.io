@@ -116,6 +116,12 @@ export function today(root, { rerender }) {
       </div>
     </section>
 
+    ${state.health?.skipped ? `
+      <section class="card warn">
+        <h2>${esc(t('healthSkippedTitle'))}</h2>
+        <p class="small">${esc(t('healthSkippedText'))}</p>
+        <button type="button" class="btn secondary" data-act="answer-health">${esc(t('healthSkippedAnswer'))}</button>
+      </section>` : ''}
     ${check ? morningCard(check) : ''}
     ${dayCard(card, state)}
 
@@ -139,6 +145,10 @@ export function today(root, { rerender }) {
 
   root.innerHTML = tabShell('today', t('hello', { name: state.profile?.name ?? '' }), body);
 
+  root.querySelector('[data-act="answer-health"]')?.addEventListener('click', () => {
+    store.update((s) => { s.onboarding.done = false; s.onboarding.step = 7; });
+    go('/onboarding/7');
+  });
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
   root.querySelectorAll('[data-act="workout"]').forEach((b) => b.addEventListener('click', () => openCheckin(b.dataset.mode ?? 'normal')));
   root.querySelector('[data-act="pain-gone"]')?.addEventListener('click', () => {
