@@ -49,18 +49,19 @@ export const EXERCISES = [
   ex('warmup', 'Суставная разминка', 'Joint warm-up', 'cardio', 'W', true, 'bike'),
 ];
 
-// Technique videos: YouTube Shorts (vertical, phone format) picked per exercise.
-// Chosen by title from search results ("how to", "proper form"); each one checked to exist and allow embedding (YouTube oEmbed).
+// Technique videos: vertical YouTube Shorts (phone format), one per exercise.
+// Picked by real view count (yt-dlp) among Shorts that show this exercise and allow embedding;
+// spoken ones were checked with /watch transcripts. Re-check from time to time: videos can be removed.
 const VIDEOS = {
-  leg_press: '5bIHppfq7vk', goblet_squat: '7-80HiXX1K8', back_squat: '04mcPy709P4', db_rdl: 'wqMYwk_-P14',
-  leg_curl: 'd6sg829PgNs', leg_ext: 'Tae3aeJe5Ks', split_squat: 'g1l8Q0Ytvco', glute_bridge: 'X_IGw8U_e38',
-  calf_raise: 'yQZDGjL-xT4', machine_chest_press: 'VHIlmOPMWWs', db_bench: 'QyuH_vFnQfI', bb_bench: '0cXAp6WhSj4',
-  incline_db_press: '8fXfwG4ftaQ', pushup: 'cjSMg-tpMmY', lat_pulldown: 'oMJmAHRZXBk', cable_row: 'QuBdM2J1mAQ',
-  db_row: 'H8jf3DwlIlo', assisted_pullup: 'JcGwiiGyYFA', chest_supported_row: 'rB-tcQGloqo', back_ext: 'RURd9mqp6A0',
-  db_shoulder_press: 'JmJzqda_0XQ', machine_shoulder_press: 'Gkk-6q7Rq-s', lateral_raise: 'iK22GwXJji0', face_pull: 'AxXHmcTBFyE',
-  db_curl: 'MKWBV29S6c0', triceps_pushdown: 'aHfbuBf1TJk', plank: 'hoeNgjheDHk', side_plank: 'sH5PiIUjDW8',
-  bird_dog: '_1j_HWknGLg', dead_bug: 'XcYtWYMz39w', pallof_press: '6q2n6pxG7jE', farmer_walk: 'XPYXSwaXzCo',
-  incline_walk: 'XBOX7qPKrIs', bike: '6Xp-d7daua0', rower: 'iBuUIBeN08k', warmup: 'PAI2L77ISMs',
+  leg_press: 'KMUiCMLXOAk', goblet_squat: '7-80HiXX1K8', back_squat: 'iZTxa8NJH2g', db_rdl: 'wqMYwk_-P14',
+  leg_curl: 'd6sg829PgNs', leg_ext: 'ztNBgrGy6FQ', split_squat: 'g1l8Q0Ytvco', glute_bridge: 'X_IGw8U_e38',
+  calf_raise: 'yQZDGjL-xT4', machine_chest_press: 'Qu7-ceCvq7w', db_bench: 'WbCEvFA0NJs', bb_bench: '0cXAp6WhSj4',
+  incline_db_press: '8fXfwG4ftaQ', pushup: 'ba8tr1NzwXU', lat_pulldown: 'bNmvKpJSWKM', cable_row: '8QuMq1GMMng',
+  db_row: 'WkFX6_GxAs8', assisted_pullup: 'JcGwiiGyYFA', chest_supported_row: '2ByilQ4NaAs', back_ext: '8rXdAAwm8Rs',
+  db_shoulder_press: 'k6tzKisR3NY', machine_shoulder_press: 'Gkk-6q7Rq-s', lateral_raise: 'HeovYNoZDRg', face_pull: 'I41wK3wTZlo',
+  db_curl: 'MKWBV29S6c0', triceps_pushdown: 'aHfbuBf1TJk', plank: 'v25dawSzRTM', side_plank: 'cSIWldRoKTo',
+  bird_dog: '_1j_HWknGLg', dead_bug: '5c-vucY3beU', pallof_press: '6q2n6pxG7jE', farmer_walk: '1uOs1hP3u4A',
+  incline_walk: 'y_CoBECEdNA', bike: '6Xp-d7daua0', rower: 'iBuUIBeN08k', warmup: '-uQeDg8uxGI',
 };
 for (const e of EXERCISES) e.video = VIDEOS[e.id] ?? null;
 
