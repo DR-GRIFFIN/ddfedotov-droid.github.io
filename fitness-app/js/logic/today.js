@@ -1,6 +1,7 @@
 // What the Today screen shows. Pure functions over the stored state, easy to test.
 import { dateKey, parseKey, daysBetween, isoDay, weekStart, addDays } from '../dates.js';
 import { PROGRAM_BY_ID } from '../data/programs.js';
+import { estimate, portionsOn } from './portions.js';
 
 export const COMEBACK_GAP_DAYS = 5;
 
@@ -44,13 +45,22 @@ export function nextTrainingDay(state, now = new Date()) {
   return null;
 }
 
+// Latest morning check was red and the user hasn't said the pain is gone since.
+export function painPaused(state) {
+  const check = [...(state.checks ?? [])].sort((a, b) => (a.at ?? '').localeCompare(b.at ?? '')).at(-1);
+  if (check?.light !== 'red') return false;
+  return !state.painResolvedAt || state.painResolvedAt < check.at;
+}
+
 // Main card on Today. One of:
-// blocked | comeback | done | workout | rest
+// blocked | painPause | active | comeback | done | workout | rest
 export function todayCard(state, now = new Date()) {
   const program = PROGRAM_BY_ID[state.plan?.program];
   if (state.health?.blocked && !state.health?.clearedAt) return { kind: 'blocked' };
 
   const today = dateKey(now);
+  if (state.active?.date === today) return { kind: 'active', program, key: state.active.key };
+  if (painPaused(state)) return { kind: 'painPause' };
   const list = sortedWorkouts(state);
   const last = list.at(-1);
   if (last?.date === today) return { kind: 'done', program };
@@ -76,9 +86,11 @@ export function pendingMorningCheck(state, now = new Date()) {
 export function nutritionToday(state, now = new Date()) {
   const today = dateKey(now);
   const eaten = (state.food ?? []).filter((f) => f.date === today);
+  // Portions logged in simple mode count too, as an estimate.
+  const fromPortions = estimate(portionsOn(state, today));
   return {
-    kcal: eaten.reduce((s, f) => s + (f.kcal || 0), 0),
-    protein: eaten.reduce((s, f) => s + (f.protein || 0), 0),
+    kcal: eaten.reduce((s, f) => s + (f.kcal || 0), 0) + fromPortions.kcal,
+    protein: eaten.reduce((s, f) => s + (f.protein || 0), 0) + fromPortions.protein,
     target: state.plan?.targets ?? { kcal: 0, protein: 0 },
   };
 }

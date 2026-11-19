@@ -49,4 +49,19 @@ export const EXERCISES = [
   ex('warmup', 'Суставная разминка', 'Joint warm-up', 'cardio', 'W', true, 'bike'),
 ];
 
+// Technique videos: YouTube Shorts (vertical, phone format) picked per exercise.
+// Chosen by title from search results ("how to", "proper form"); each one checked to exist and allow embedding (YouTube oEmbed).
+const VIDEOS = {
+  leg_press: '5bIHppfq7vk', goblet_squat: '7-80HiXX1K8', back_squat: '04mcPy709P4', db_rdl: 'wqMYwk_-P14',
+  leg_curl: 'd6sg829PgNs', leg_ext: 'Tae3aeJe5Ks', split_squat: 'g1l8Q0Ytvco', glute_bridge: 'X_IGw8U_e38',
+  calf_raise: 'yQZDGjL-xT4', machine_chest_press: 'VHIlmOPMWWs', db_bench: 'QyuH_vFnQfI', bb_bench: '0cXAp6WhSj4',
+  incline_db_press: '8fXfwG4ftaQ', pushup: 'cjSMg-tpMmY', lat_pulldown: 'oMJmAHRZXBk', cable_row: 'QuBdM2J1mAQ',
+  db_row: 'H8jf3DwlIlo', assisted_pullup: 'JcGwiiGyYFA', chest_supported_row: 'rB-tcQGloqo', back_ext: 'RURd9mqp6A0',
+  db_shoulder_press: 'JmJzqda_0XQ', machine_shoulder_press: 'Gkk-6q7Rq-s', lateral_raise: 'iK22GwXJji0', face_pull: 'AxXHmcTBFyE',
+  db_curl: 'MKWBV29S6c0', triceps_pushdown: 'aHfbuBf1TJk', plank: 'hoeNgjheDHk', side_plank: 'sH5PiIUjDW8',
+  bird_dog: '_1j_HWknGLg', dead_bug: 'XcYtWYMz39w', pallof_press: '6q2n6pxG7jE', farmer_walk: 'XPYXSwaXzCo',
+  incline_walk: 'XBOX7qPKrIs', bike: '6Xp-d7daua0', rower: 'iBuUIBeN08k', warmup: 'PAI2L77ISMs',
+};
+for (const e of EXERCISES) e.video = VIDEOS[e.id] ?? null;
+
 export const EXERCISE_BY_ID = Object.fromEntries(EXERCISES.map((e) => [e.id, e]));

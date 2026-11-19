@@ -9,6 +9,9 @@ import { recommendation } from './screens/recommendation.js';
 import { today } from './screens/today.js';
 import { profile } from './screens/profile.js';
 import { placeholder } from './screens/placeholder.js';
+import { workout } from './screens/workout.js';
+import { nutrition } from './screens/nutrition.js';
+import { settleStale } from './logic/workout.js';
 
 const root = document.getElementById('app');
 
@@ -19,8 +22,9 @@ const ROUTES = {
   plan: recommendation,
   today,
   profile,
+  workout,
   program: placeholder('program'),
-  nutrition: placeholder('nutrition'),
+  nutrition,
   progress: placeholder('progress'),
   friends: placeholder('friends'),
 };
@@ -31,8 +35,11 @@ function guard(name, state) {
   if (!state.onboarding.done) return name === 'onboarding' ? null : `/onboarding/${state.onboarding.step}`;
   if (!state.plan?.confirmed) return ['plan', 'health-stop'].includes(name) ? null : '/plan';
   if (['welcome', 'onboarding', 'plan'].includes(name)) return '/today';
+  if (name === 'workout' && (!state.active || (state.health?.blocked && !state.health?.clearedAt))) return '/today';
   return null;
 }
+
+let lastPath = null;
 
 function route() {
   const [name = 'today', ...params] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -43,13 +50,16 @@ function route() {
   }
   const screen = ROUTES[name] ?? today;
   screen(root, { params, rerender: route });
-  window.scrollTo(0, 0);
+  // Scroll to top only when moving to another screen, not on a re-render of the same one.
+  if (location.hash !== lastPath) window.scrollTo(0, 0);
+  lastPath = location.hash;
 }
 
 async function start() {
   const state = store.get();
   setLang(state.settings.lang ?? detectLang());
   await restoreSession();
+  store.update(settleStale);
   window.addEventListener('hashchange', route);
   route();
 

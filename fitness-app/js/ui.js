@@ -74,3 +74,9 @@ export const bar = (value, max) => {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${value}"><span style="width:${pct}%"></span></div>`;
 };
+
+// Navigates, or re-renders when already on that path (hashchange wouldn't fire).
+export function show(path) {
+  if (location.hash === '#' + path) window.dispatchEvent(new HashChangeEvent('hashchange'));
+  else go(path);
+}
